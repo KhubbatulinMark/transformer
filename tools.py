@@ -30,6 +30,15 @@ def get_all_data(file_dir, ext):
                  'C2H4': gas_concentration[2],
                  'C2H2': gas_concentration[3],
                  'status': value}, ignore_index=True)
-
     data = data.astype({'H2': 'float128', 'CO': 'float128', 'C2H4': 'float128', 'C2H2': 'float128'})
     return data
+
+
+def get_data_from_csv(file_dir, ext, predfile=False):
+    all_files = glob.glob(file_dir + "/*." + ext)
+    data = pd.DataFrame(columns=['H2', 'CO', 'C2H4', 'C2H2', 'file_name', 'predict_dt'])
+    print(predfile)
+    if predfile:
+        print(1)
+        datafrompredfile = pd.read_csv(predfile).to_dict()
+    return datafrompredfile
