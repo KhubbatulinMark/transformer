@@ -9,7 +9,7 @@ import statsmodels.api as sm
 import numpy as np
 from tqdm import tqdm
 from pmdarima import auto_arima
-
+from pathlib import Path
 def get_filename_with_status(filename_list):
     filename_with_status = {}
     for filename in filename_list:
@@ -41,9 +41,10 @@ def get_all_data(file_dir, ext):
     return data
 
 
-def get_data_from_csv(file_dir, ext, predfile=False):
+def get_data_from_csv(file_dir, ext, predfile=None):
+
     if predfile:
-        parse=[]
+        parse = []
         datafrompredfile = pd.read_csv(predfile).values
         datafrompredfile = {i[0]:i[1] for i in datafrompredfile}
         for i,key in enumerate(datafrompredfile):
@@ -53,6 +54,15 @@ def get_data_from_csv(file_dir, ext, predfile=False):
             datafromfile.reset_index(drop=True,inplace=True)
             datafromfile = datafromfile.set_index(datetime_list)
             parse.append((key,datafrompredfile[key],datafromfile))
+    else:
+        parse = []
+        files = glob.glob(file_dir + "/*." + ext)
+        for i, file in enumerate(files):
+            datafromfile = pd.read_csv(file)
+            datetime_list = pd.date_range("2020-01-01", periods=len(datafromfile), freq='12H')
+            datafromfile.reset_index(drop=True, inplace=True)
+            datafromfile = datafromfile.set_index(datetime_list)
+            parse.append((Path(file).name, None, datafromfile))
     return parse
 def find_best_arima_model_for_gas(data):
     file = data
