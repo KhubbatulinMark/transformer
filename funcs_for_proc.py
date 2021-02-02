@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import numpy as np
 from tqdm import tqdm
+from pmdarima import auto_arima
 
 def get_filename_with_status(filename_list):
     filename_with_status = {}
@@ -58,37 +59,33 @@ def find_best_arima_model_for_gas(data):
     data_normal = file[2]
     model_res = {}
     for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
-        print('----------------------------------------------------\nGAS %s' % gas)
-        df = pd.DataFrame(columns=['aic', 'param', 'param_seasonal'])
+        # print('----------------------------------------------------\nGAS %s' % gas)
+        df = pd.DataFrame(columns=['aic', 'param'])
         p = q = range(0, 2)
-        d = [2]
+        d =[1,2]
         pdq = list(product(p, d, q))
-        seasonal_pdq = [(x[0], x[1], x[2], 1) for x in pdq]
         warnings.filterwarnings("ignore")
         aics = []
         params = []
-        param_seasonals = []
-        all=len(pdq)*len(seasonal_pdq)
-        pbar = tqdm(total=all)
+        # all=len(pdq)*len(seasonal_pdq)
+        # pbar = tqdm(total=all)
         for param in pdq:
-            for param_seasonal in seasonal_pdq:
-                try:
-                    mod = sm.tsa.statespace.SARIMAX(data_normal[gas],
-                                                    order=param,
+            try:
+                mod = sm.tsa.statespace.SARIMAX(data_normal[gas],
+                                                order=param,
 
-                                                    enforce_stationarity=False,
-                                                    enforce_invertibility=False)
+                                                enforce_stationarity=False,
+                                                enforce_invertibility=False)
 
-                    results = mod.fit()
+                results = mod.fit()
 
-                    # print('ARIMA{}x{} - AIC:{}'.format(param, param_seasonal, results.aic))
-                    aics.append(results.aic)
-                    params.append(param)
-                    param_seasonals.append(param_seasonal)
-                    pbar.update(1)
-                except BaseException as e:
-                    continue
-        df = pd.DataFrame({'aic': aics, 'param': params, 'param_seasonal': param_seasonals})
+                # print('ARIMA{}x{} - AIC:{}'.format(param, param_seasonal, results.aic))
+                aics.append(results.aic)
+                params.append(param)
+                # pbar.update(1)
+            except BaseException as e:
+                continue
+        df = pd.DataFrame({'aic': aics, 'param': params})
         minaic_param = df[df.aic == df.aic.min()].iloc[[0]]
         # print(minaic_param)
         # print(minaic_param.param.values, minaic_param.param_seasonal.values)
@@ -96,11 +93,10 @@ def find_best_arima_model_for_gas(data):
                                         order=minaic_param.param.values[0],
                                         enforce_stationarity=False,
                                         enforce_invertibility=False)
-
         model_res[gas] = mod.fit()
 
         # print(model_res[gas].summary().tables[1])
-        pbar.close()
+        # pbar.close()
     return model_res
 
 def plot_predict(data,model_res):
@@ -160,3 +156,51 @@ def plot_predict(data,model_res):
         #     ax.fill_between(pred_ci.index,
         #                     pred_ci.iloc[:, 0],
         #                     pred_ci.iloc[:, 1], color='k', alpha=.25)
+def find_best_autoarima_model_for_gas(data):
+    file = data
+    data_normal = file[2]
+    model_res = {}
+    for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
+        print('----------------------------------------------------\nGAS %s' % gas)
+        df = pd.DataFrame(columns=['aic', 'param', 'param_seasonal'])
+        d = p = q = range(0, 3)
+        pdq = list(product(p, d, q))
+        seasonal_pdq = [(x[0], x[1], x[2], 1) for x in pdq]
+        warnings.filterwarnings("ignore")
+        aics = []
+        params = []
+        param_seasonals = []
+        all=len(pdq)*len(seasonal_pdq)
+        pbar = tqdm(total=all)
+        for param in pdq:
+            for param_seasonal in seasonal_pdq:
+                try:
+                    mod = sm.tsa.statespace.SARIMAX(data_normal[gas],
+                                                    order=param,
+
+                                                    enforce_stationarity=False,
+                                                    enforce_invertibility=False)
+
+                    results = mod.fit()
+
+                    # print('ARIMA{}x{} - AIC:{}'.format(param, param_seasonal, results.aic))
+                    aics.append(results.aic)
+                    params.append(param)
+                    param_seasonals.append(param_seasonal)
+                    pbar.update(1)
+                except BaseException as e:
+                    continue
+        df = pd.DataFrame({'aic': aics, 'param': params, 'param_seasonal': param_seasonals})
+        minaic_param = df[df.aic == df.aic.min()].iloc[[0]]
+        # print(minaic_param)
+        # print(minaic_param.param.values, minaic_param.param_seasonal.values)
+        mod = sm.tsa.statespace.SARIMAX(data_normal[gas],
+                                        order=minaic_param.param.values[0],
+                                        enforce_stationarity=False,
+                                        enforce_invertibility=False)
+
+        model_res[gas] = mod.fit()
+
+        # print(model_res[gas].summary().tables[1])
+        pbar.close()
+    return model_res
