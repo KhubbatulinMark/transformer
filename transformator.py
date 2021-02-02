@@ -2,8 +2,6 @@ import os
 
 import pandas as pd
 
-from tools import get_all_data
-
 transformator_type = {
 
     '110kW_free_breath',
