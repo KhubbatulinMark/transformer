@@ -29,23 +29,30 @@ def get_accepted_maximum_value(name, year, transf_type=None):
                 return 0.005, 0.02
             if year >= 5:
                 return 0.002, 0.01
+
         elif transf_type == '110kW_protection':
             if year < 5:
                 return 0.006, 0.01
             if year >= 5:
                 return 0.005, 0.009
+        elif transf_type == '220kW':
+            return 0.005, 0.017
 
     elif name == 'C2H2':
         if transf_type == '35kW':
             return 0.001, 0.0025
         elif transf_type == '110kW_protection':
             return 0.003, 0.0008
+        elif transf_type == '220kW':
+            return 0.0008, 0.002
 
     elif name == 'C2H4':
         if transf_type == '35kW':
             return 0.003, 0.009
         elif transf_type == '110kW_protection':
             return 0.005, 0.01
+        elif transf_type == '220kW':
+            return 0.015, 0.05
 
     elif name == 'CO':
         if transf_type == '35kW':
@@ -55,6 +62,8 @@ def get_accepted_maximum_value(name, year, transf_type=None):
                 return 0.018, 0.035
         elif transf_type == '110kW_protection':
             return 0.045, 0.07
+        elif transf_type == '220kW':
+            return 0.053, 0.07
 
 
 def get_all_relative_concentration(data: pd.DataFrame):
