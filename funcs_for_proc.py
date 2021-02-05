@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import numpy as np
 from tqdm import tqdm
-from pmdarima import auto_arima
 from pathlib import Path
+import pmdarima as pm
+
+
 def get_filename_with_status(filename_list):
     filename_with_status = {}
     for filename in filename_list:
@@ -214,3 +216,78 @@ def find_best_autoarima_model_for_gas(data):
         # print(model_res[gas].summary().tables[1])
         pbar.close()
     return model_res
+
+
+def auto_arima(data):
+    file = data
+    data_normal = file[2]
+    model_res = {}
+    for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
+        stepwise_fit = pm.auto_arima(data_normal[gas], start_p=1, start_q=1, max_p=2, max_q=2, max_d=3,
+                                     start_P=0, seasonal=False, trace=False,
+                                     error_action='ignore',
+                                     suppress_warnings=True,
+                                     stepwise=True, n_jobs=8)
+        model_res[gas] = stepwise_fit
+    return model_res
+
+
+def plot_predict_auto_arima(data, model_res):
+    file = data
+    data_normal = file[2]
+    props = dict(boxstyle='round', facecolor='wheat', alpha=1)
+    for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
+        pred = model_res[gas].predict(n_periods=file[1])
+        datetime_pred = pd.date_range("2020-01-01", periods=len(data_normal[gas]) + file[1], freq='12H')
+        plt.figure()
+        forecasts = pd.DataFrame(pred, index=pd.date_range(datetime_pred[len(data_normal[gas])], datetime_pred[-1],
+                                                           freq='12H'))
+
+        # set up the plot
+
+        # add the lines
+        plt.plot(data_normal[gas], color='b', label='Observed')
+        plt.plot(forecasts, color='r', label='Forecast')
+
+        accepted_level = get_accepted_maximum_value(gas, 0, '220kW')[0]
+        maximum_level = get_accepted_maximum_value(gas, 0, '220kW')[1]
+        max_axhspan_level = max(data_normal[gas].max(), maximum_level, pred.max()) * 1.05
+
+        max_text_level = (max_axhspan_level - maximum_level) / 2 + maximum_level
+        accepted_text_level = (maximum_level - accepted_level) / 2 + accepted_level
+        normal_text_level = accepted_level / 2
+        text_egle = round(len(data_normal.index) * 0.90)
+        # Графики
+        plt.vlines(datetime_pred[-1], 0, max_axhspan_level,
+                   color='r',
+                   linewidth=2,
+                   linestyle='--')
+        # Зоны
+        plt.axhspan(0, accepted_level, facecolor='1', color='green', alpha=0.3)
+        plt.axhspan(accepted_level, maximum_level, facecolor='1', color='yellow', alpha=0.3)
+        plt.axhspan(maximum_level, max_axhspan_level, facecolor='1', color='red', alpha=0.3)
+        #         Текст
+        plt.text(data_normal.index[text_egle], max_text_level, "Предотказное состояние", fontsize=12, color='black',
+                 bbox=props)
+        plt.text(data_normal.index[text_egle], accepted_text_level, "Развитие дефекта", fontsize=12, color='black',
+                 bbox=props)
+        plt.text(data_normal.index[text_egle], normal_text_level, "Нормальное состояние", fontsize=12, color='black',
+                 bbox=props)
+
+
+def predict_time_st(models, file):
+    time_gas = []
+    for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
+        accepted_level = get_accepted_maximum_value(gas, 0, '220kW')[0]
+        pered_val = models[gas].predict(n_periods=1500)
+        time_gas = np.argwhere(pered_val > accepted_level)
+        if time_gas.size == 0:
+            stepwise_fit = pm.auto_arima(file[2][gas], start_p=1, start_q=1, max_p=2, max_q=2, max_d=2,
+                                         start_P=0, seasonal=False, trace=False,
+                                         error_action='ignore',
+                                         suppress_warnings=True,
+                                         stepwise=True, n_jobs=8)
+            pered_val = stepwise_fit.predict(n_periods=1500)
+            time_gas = np.argwhere(pered_val > accepted_level)
+
+    return time_gas.min()
