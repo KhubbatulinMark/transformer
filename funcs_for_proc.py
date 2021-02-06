@@ -223,8 +223,8 @@ def auto_arima(data):
     data_normal = file[2]
     model_res = {}
     for i, gas in enumerate(['H2', 'CO', 'C2H4', 'C2H2']):
-        stepwise_fit = pm.auto_arima(data_normal[gas], start_p=1, start_q=1, max_p=2, max_q=2, max_d=3,
-                                     start_P=0, seasonal=False, trace=False,
+        stepwise_fit = pm.auto_arima(data_normal[gas], start_p=1, start_q=1, max_p=2, max_q=1, max_d=2,
+                                     seasonal=False, trace=False,
                                      error_action='ignore',
                                      suppress_warnings=True,
                                      stepwise=True, n_jobs=8)
